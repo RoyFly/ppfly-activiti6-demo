@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- templates/process/todo_list.html -->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>待办列表</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/font-awesome.css}">
+    <!-- Ionicons -->
+    <link rel="stylesheet" th:href="@{/webjars/ionicons/css/ionicons.css}">
+    <!-- Theme style -->
+    <link rel="stylesheet" th:href="@{/webjars/AdminLTE/dist/css/AdminLTE.min.css}">
+    <link rel="stylesheet" th:href="@{/webjars/AdminLTE/dist/css/skins/skin-blue.min.css}">
+
+    <!-- jQuery 3 -->
+    <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+    <!-- Bootstrap 3.3.7 -->
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+    <!-- AdminLTE App -->
+    <script th:src="@{/webjars/AdminLTE/dist/js/adminlte.min.js}"></script>
+    <!--<script th:src="@{/webjars/AdminLTE/plugins/jQueryUI/jquery-ui.min.js}"></script>-->
+    <script th:src="@{/resource/jquery-ui-1.12.1/jquery-ui.js}"></script>
+    <script th:src="@{/resource/jquery-ui-1.12.1/i18n/datepicker-zh-CN.js}"></script>
+    <link rel="stylesheet" th:href="@{/resource/jquery-ui-1.12.1/jquery-ui.min.css}">
+
+    <script th:src="@{/resource/select2/select2.min.js}"></script>
+    <link rel="stylesheet" th:href="@{/resource/select2/select2.min.css}">
+
+    <!--bootstrap-table-->
+    <script th:src="@{/webjars/bootstrap-table/dist/bootstrap-table.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap-table/1.17.1/dist/locale/bootstrap-table-zh-CN.js}"></script>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap-table/dist/bootstrap-table.min.css}">
+
+    <!--moment-->
+    <script th:src="@{/resource/moment/moment.js}"></script>
+
+    <!--IE条件注释-->
+    <!--条件判断语法格式如下，可以根据IE、非IE进行判断，还可以根据IE的版本号进行判断，版本号可以精确到小数点后4位-->
+    <!--html5shiv：是一个针对 IE 浏览器的 HTML5 JavaScript 补丁，目的是让 IE 识别并支持 HTML5 元素。-->
+    <!--respond：让不支持css3 Media Query的浏览器包括IE6-IE8等其他浏览器支持查询-->
+    <!--引入html5shiv.js和respond.js来让ie7，8兼容h5及一些响应式变化-->
+    <!--[if lt IE 9]>
+    <script src="/resource/ifltIE9/html5shiv.min.js"></script>
+    <script src="/resource/ifltIE9/respond.min.js"></script>
+    <![endif]-->
+
+    <!--toast-->
+    <link rel="stylesheet" th:href="@{/resource/jqueryToast/css/toast.style.css}">
+    <script th:src="@{/resource/jqueryToast/js/toast.script.js}"></script>
+
+    <script th:inline="javascript">
+        //格式化操作列
+        function fmtOper(value, row, index) {
+            var processDefinitionId = row["processDefinitionId"];
+            var assignee = row["assignee"];
+            var operStr = '&nbsp;&nbsp;<a class="btn btn-primary btn-xs" id="deal" role="button" href="javascript:deal(\'' + processDefinitionId + '\',\'' + value + '\',\'' + assignee + '\')">审批</a>';
+            return operStr;
+        }
+
+        //审核
+        function deal(processDefinitionId, taskId, assignee) {
+            if (assignee != "undefined") {
+                window.location.href = "/common/deal/" + processDefinitionId + "/" + taskId;
+            } else {
+                $.ajax({
+                    type: 'post',
+                    url: "/common/claim/" + taskId,
+                    data: {
+                        "userId": [[${userName}]]
+                    },
+                    success: function (data) {
+                        window.location.href = "/common/deal/" + processDefinitionId + "/" + taskId;
+                    },
+                    error: function () {
+                        $.Toast("message", "签出任务失败", "error", {
+                            stack: true,
+                            has_icon: true,
+                            has_close_btn: true,
+                            fullscreen: false,
+                            timeout: 3000,
+                            sticky: false,
+                            has_progress: true,
+                            rtl: false,
+                        });
+                        search();
+                        console.log("签出任务失败");
+                    }
+                });
+            }
+        }
+
+        //初始化BootStrapTable
+        var initBootStrapTable = function () {
+            $('#bootStrapTable').bootstrapTable({
+                url: "/common/todo",
+                method: 'post',
+                locales: '',
+                contentType: "application/x-www-form-urlencoded",
+                pagination: true,                   //是否显示分页（*）
+                sidePagination: "server",          //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页
+                pageSize: 10,                       //每页的记录行数（*）
+                pageList: [10, 25, 100, 200],
+                queryParamsType: 'undefined',                //默认为limit,
+                columns: [
+                    {
+                        title: '所属流程',
+                        field: 'processInstanceName',
+                        width: "90px"
+                    }, {
+                        title: '所属环节',
+                        field: 'name',
+                        width: "80",
+                        formatter: function (value, row, index) {
+                            return "<i style='min-height: 29px;display: block;line-height: 2rem;'>" + value + "</i>";
+                        }
+                    }, {
+                        title: '发起人',
+                        field: 'startUserId',
+                        width: "50"
+                    }, {
+                        title: '流程发起时间',
+                        field: 'startTime',
+                        width: "50",
+                        formatter: function (value, row, index) {
+                            return moment(value).format('YYYY-MM-DD HH:mm:ss');
+                        }
+                    }, {
+                        title: '当前处理人',
+                        field: 'assignee',
+                        width: "50",
+                        formatter: function (value, row, index) {
+                            if (!!value) {
+                                return value;
+                            } else {
+                                return row["candidate"];
+                            }
+                        }
+                    },
+                    {
+                        title: '任务接收时间',
+                        field: 'createTime',
+                        width: "50",
+                        formatter: function (value, row, index) {
+                            return moment(value).format('YYYY-MM-DD HH:mm:ss');
+                        }
+                    }, {
+                        title: '操作',
+                        field: 'id',
+                        width: "40px",
+                        formatter: 'fmtOper'
+                    }
+                ],
+                queryParams: function (params) {
+                    params.extra_search = "userName=" + [[${userName}]];
+                    return params;
+                },
+            });
+        };
+
+        //页面刷新
+        function search() {
+            $("#bootStrapTable").bootstrapTable('refresh');
+        }
+
+        //重置
+        function reSearch() {
+            search()
+        }
+
+        //页面加载初始化
+        $(function () {
+            initBootStrapTable();
+        });
+    </script>
+    <style>
+    </style>
+</head>
+<body class="gray-bg container-fluid">
+
+<div class="row wrapper border-bottom white-bg page-heading">
+    <div class="col-lg-10">
+        <h2>流程管理</h2>
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a>流程管理</a>
+            </li>
+            <li class="breadcrumb-item active">
+                <strong>待办列表</strong>
+            </li>
+        </ol>
+    </div>
+</div>
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="row">
+        <div class="col-lg-12 col-md-12 col-xs-12">
+            <div class="ibox ">
+                <div class="ibox-content">
+                    <div class="form-group row" style="margin-bottom: 0rem;">
+                        <label class="col-sm-1 col-form-label text-right"></label>
+                        <div class="col-sm-2">
+                        </div>
+                        <label class="col-sm-1 col-form-label text-right"></label>
+                        <div class="col-sm-2">
+                        </div>
+                        <div class="col-sm-4">
+                        </div>
+                        <div class="col-sm-2">
+                            <div class="input-group">
+                                <div class="input-group-append">
+                                    <button style="min-width: 80px;" class="btn btn-primary" type="button"
+                                            onclick="search()">
+                                        <i class="fa fa-search"></i>
+                                        查 询
+                                    </button>
+                                    <button style="min-width: 80px;" class="btn btn-white " type="button"
+                                            onclick="reSearch()">
+                                        <i class="fa fa-refresh"></i>
+                                        重 置
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12 col-md-12 col-xs-12">
+            <div class="ibox ">
+                <div class="ibox-title">
+                    <h5>待办列表</h5>
+                    <div class="ibox-tools">
+                    </div>
+                </div>
+                <div class="ibox-content">
+                    <table class="table table-bordered table-hover" style="word-break:break-all"
+                           id="bootStrapTable">
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+</html>

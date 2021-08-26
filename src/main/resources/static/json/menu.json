@@ -1,0 +1,27 @@
+[
+  {
+    "menuId": "1",
+    "name": "基本信息",
+    "controller": "#",
+    "child": []
+  },
+  {
+    "menuId": "2",
+    "name": "流程管理",
+    "controller": "#",
+    "child": [
+      {
+        "menuId": "3",
+        "pMenuId": "2",
+        "name": "模板列表",
+        "controller": "user/home"
+      },
+      {
+        "menuId": "4",
+        "pMenuId": "2",
+        "name": "流程定义",
+        "controller": "user/add"
+      }
+    ]
+  }
+]

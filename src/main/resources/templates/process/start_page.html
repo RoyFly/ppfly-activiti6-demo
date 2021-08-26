@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>动态表单申请界面</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/css/bootstrap.min.css}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" th:href="@{/webjars/font-awesome/css/font-awesome.css}">
+    <!-- Ionicons -->
+    <link rel="stylesheet" th:href="@{/webjars/ionicons/css/ionicons.css}">
+    <!-- Theme style -->
+    <link rel="stylesheet" th:href="@{/webjars/AdminLTE/dist/css/AdminLTE.min.css}">
+    <link rel="stylesheet" th:href="@{/webjars/AdminLTE/dist/css/skins/skin-blue.min.css}">
+
+    <!-- jQuery 3 -->
+    <script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+    <!-- Bootstrap 3.3.7 -->
+    <script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+    <!-- AdminLTE App -->
+    <script th:src="@{/webjars/AdminLTE/dist/js/adminlte.min.js}"></script>
+    <!--<script th:src="@{/webjars/AdminLTE/plugins/jQueryUI/jquery-ui.min.js}"></script>-->
+    <script th:src="@{/resource/jquery-ui-1.12.1/jquery-ui.js}"></script>
+    <script th:src="@{/resource/jquery-ui-1.12.1/i18n/datepicker-zh-CN.js}"></script>
+    <link rel="stylesheet" th:href="@{/resource/jquery-ui-1.12.1/jquery-ui.min.css}">
+
+    <script th:src="@{/resource/select2/select2.min.js}"></script>
+    <link rel="stylesheet" th:href="@{/resource/select2/select2.min.css}">
+
+    <!--IE条件注释-->
+    <!--条件判断语法格式如下，可以根据IE、非IE进行判断，还可以根据IE的版本号进行判断，版本号可以精确到小数点后4位-->
+    <!--html5shiv：是一个针对 IE 浏览器的 HTML5 JavaScript 补丁，目的是让 IE 识别并支持 HTML5 元素。-->
+    <!--respond：让不支持css3 Media Query的浏览器包括IE6-IE8等其他浏览器支持查询-->
+    <!--引入html5shiv.js和respond.js来让ie7，8兼容h5及一些响应式变化-->
+    <!--[if lt IE 9]>
+    <script src="/resource/ifltIE9/html5shiv.min.js"></script>
+    <script src="/resource/ifltIE9/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- Google Font -->
+    <link rel="stylesheet" th:href="@{/resource/fonts/local.google.fonts.css}">
+
+    <!--toast-->
+    <link rel="stylesheet" th:href="@{/resource/jqueryToast/css/toast.style.css}">
+    <script th:src="@{/resource/jqueryToast/js/toast.script.js}"></script>
+
+    <script th:inline="javascript">
+
+        //页面加载初始化
+        $(function () {
+            $("#startBtn").on("click", function () {
+                var param = {};
+                var formArray = $("#form").serializeArray();
+                $.each(formArray, function (i, item) {
+                    param[item.name] = item.value;
+                });
+
+                $.ajax({
+                    type: 'post',
+                    url: this.form.action,
+                    data: param,
+                    success: function (data) {
+                        $.Toast("message", "提交成功", "success", {
+                            stack: true,
+                            has_icon: true,
+                            has_close_btn: true,
+                            fullscreen: false,
+                            timeout: 3000,
+                            sticky: false,
+                            has_progress: true,
+                            rtl: false,
+                        });
+                        console.log(data);
+                    },
+                    error: function () {
+                        $.Toast("message", "提交失败", "error", {
+                            stack: true,
+                            has_icon: true,
+                            has_close_btn: true,
+                            fullscreen: false,
+                            timeout: 3000,
+                            sticky: false,
+                            has_progress: true,
+                            rtl: false,
+                        });
+                        console.log("失败");
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body class="white-bg container-fluid">
+<div class="wrapper wrapper-content animated fadeInRight">
+
+    <div class="row">
+        <div class="col-lg-12 col-md-12 col-xs-12">
+            <div class="ibox ">
+                <div class="ibox-content">
+                    <form method="post" th:action="@{/common/start.th}" id="form">
+                        <input type="hidden" th:id="processDefinitionId" th:name="processDefinitionId"
+                               th:value="${processDefinitionId}"/>
+                        <div class="row form-group">
+                            <div class="col-md-1 align-right">事项名称</div>
+                            <div class="col-md-7 input-group">
+                                <input type="text" th:id="procName" th:name="procName" th:value="${proc.resourceName}"
+                                       class="width-100 form-control"/>
+                            </div>
+                        </div>
+                        <div th:each="prop:${list}">
+                            <div class="row form-group">
+                                <div class="col-md-1 align-right">[[${prop.name}]]</div>
+
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='string'}">
+                                    <input type="text" th:id="*{prop.id}" th:name="*{prop.id}" th:value="*{prop.value}"
+                                           class="width-100 form-control"/>
+                                </div>
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='date'}">
+                                    <input type="text" th:id="*{prop.id}" th:name="*{prop.id}"
+                                           class="width-100 form-control date-picker-o" readonly
+                                           th:value="*{#dates.format(prop.value, 'yyyy-MM-dd HH:mm')}"/>
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </div>
+                                    <script th:inline="javascript">
+                                        var propId = [[${prop.id}]] + "";
+                                        $('#' + propId).datepicker({
+                                            dateFormat: "yy-mm-dd",
+                                            autoclose: true,
+                                            toggleActive: true,
+                                            todayHighlight: true
+                                        });
+                                    </script>
+                                </div>
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='long'}">
+                                    <input type="number" th:id="*{prop.id}" th:name="*{prop.id}"
+                                           th:value="*{prop.value}"
+                                           class="width-100 form-control"/>
+                                </div>
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='enum'}">
+                                    <select th:id="*{prop.id}" th:name="*{prop.id}" class="form-control chosen-select">
+                                        <option th:each="info:*{prop.type.getInformation('values')}"
+                                                th:value="*{info.key}" th:text="*{info.value}">
+                                        </option>
+                                    </select>
+                                    <script th:inline="javascript">
+                                        var propId = [[${prop.id}]] + "";
+                                        $('#' + propId).select2({
+                                            minimumResultsForSearch: -1,
+                                            tags: true,
+                                            language: "zh-CN"
+                                        });
+                                    </script>
+                                </div>
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='boolean'}">
+                                    <div class="radio-inline">
+                                        <label>
+                                            <input type="radio" th:name="*{prop.id}" value="1" checked/>
+                                            <span>&nbsp;是</span>
+                                        </label>
+                                    </div>
+                                    <div class="radio-inline">
+                                        <label>
+                                            <input type="radio" th:name="*{prop.id}" value="0"/>
+                                            <span>&nbsp;否</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-7 input-group" th:if="*{prop.type.name=='tree'}">
+                                    <input type="text" th:id="*{prop.id}" th:name="*{prop.id}" th:value="*{prop.value}"
+                                           class="width-100 form-control"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row form-group align-right col-md-8">
+                            <button class="btn btn-primary" type="button" id="startBtn">启动流程</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
