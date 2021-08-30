@@ -1,0 +1,9 @@
+一、Activiti流程图乱码常见有两种情况：（参考@link https://blog.csdn.net/chen_lay/article/details/78459907）
+    1、所有中文字符变成方框（font文件下字体主要为解决该情况）
+    2、所有中文字符变成无意义汉字
+二、给JRE添加支持罕见语种的字体 / Fallback Font for uncommon languages in JRE
+    1、Windows系统本身缺省并不具备支持所有语种的字体，比如老挝文字体就没有。
+    而就算你手工安装了字体进去，Windows里面运行的Java程序（比如说Oracle SQL Developer）也并不知道该用你安装的这个字体。
+    （参考@link http://james-hu.users.sourceforge.net/blog/index.php/2009/04/fallback-font-for-uncommon-languages-in-jre/）
+    2、JRE支持一种称为fall back字体的机制。所谓fall back，通俗点说就是，实在没办法时候的最后一次尝试。
+    3、installing them in the lib/fonts/fallback directory within the JRE.（参考官网@link https://docs.oracle.com/javase/8/docs/technotes/guides/intl/font.html）

@@ -57,6 +57,15 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--数据库连接池 todo druid-spring-boot-starter可以省去原本写Druid的一些@Configuration的配置，直接将配置写在application.yml里，看起来更简单一些-->
+        <!-- https://mvnrepository.com/artifact/com.alibaba/druid -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.2.6</version>
+        </dependency>
+
+
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-hibernate5</artifactId>

@@ -30,12 +30,12 @@ public class FLowGoTests {
     @Test
     public void flowGo() throws Exception {
         // 获取当前任务
-        Task currentTask = taskService.createTaskQuery().taskId("97516").singleResult();
+        Task currentTask = taskService.createTaskQuery().taskId("1430809921854771200").singleResult();
         BpmnModel bpmnModel = repositoryService.getBpmnModel(currentTask.getProcessDefinitionId());
         // 获取流程定义
         Process process = bpmnModel.getMainProcess();
         // 获取目标节点定义
-        FlowNode targetNode = (FlowNode) process.getFlowElement("sid-C1FAD8CC-C3E3-4507-8F13-C82DE7C4A16C");
+        FlowNode targetNode = (FlowNode) process.getFlowElement("ACT_PRC_LEAVE_CLOSE");
 
         // 删除当前运行任务，同时返回执行id，该id在并发情况下也是唯一的
         String executionEntityId = managementService.executeCommand(new DeleteTaskCmd(currentTask.getId()));

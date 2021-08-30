@@ -21,11 +21,16 @@ public class DeleteTaskCmd extends NeedsActiveTaskCmd<String> {
         // 获取当前任务的执行对象实例
         ExecutionEntity executionEntity = currentTask.getExecution();
         // 删除当前任务,来源任务
-        taskEntityManager.deleteTask(currentTask, "删除原因", false, false);
+        taskEntityManager.deleteTask(currentTask, "删除当前任务", false, false);
         // 返回当前任务的执行对象id
         return executionEntity.getId();
     }
 
+    /**
+     * 判断当前任务是否已挂起，当任务挂起时将抛出的异常消息
+     *
+     * @return
+     */
     @Override
     public String getSuspendedTaskException() {
         return "挂起的任务不能跳转";

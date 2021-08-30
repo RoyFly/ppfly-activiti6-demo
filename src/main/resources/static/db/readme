@@ -1,0 +1,2 @@
+# 开启spring.activiti.database-schema-update=true会自动创建activiti表
+本数据库内容仅供参考

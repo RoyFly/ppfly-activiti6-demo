@@ -6,10 +6,8 @@ import com.ppfly.common.utils.BootStrapTablePage;
 import com.ppfly.common.utils.BootstrapTableDTO;
 import com.ppfly.common.utils.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.activiti.engine.FormService;
-import org.activiti.engine.IdentityService;
-import org.activiti.engine.RuntimeService;
-import org.activiti.engine.TaskService;
+import org.activiti.bpmn.model.BpmnModel;
+import org.activiti.engine.*;
 import org.activiti.engine.form.FormProperty;
 import org.activiti.engine.form.StartFormData;
 import org.activiti.engine.form.TaskFormData;
@@ -18,6 +16,7 @@ import org.activiti.engine.impl.persistence.entity.VariableInstance;
 import org.activiti.engine.repository.ProcessDefinition;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +25,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +44,9 @@ public class CommonController {
     private RuntimeService runtimeService;
 
     @Autowired
+    private RepositoryService repositoryService;
+
+    @Autowired
     private TaskService taskService;
 
     @Autowired
@@ -48,6 +54,9 @@ public class CommonController {
 
     @Autowired
     private BaseWorkflowService baseWorkflowService;
+
+    @Autowired
+    private ProcessEngineConfiguration processEngineConfiguration;
 
 
     /**
@@ -128,7 +137,7 @@ public class CommonController {
     }
 
     /**
-     * 退回任务
+     * 取消签出任务
      */
     @PostMapping("/unclaim/{taskId}")
     @ResponseBody
@@ -176,9 +185,63 @@ public class CommonController {
     @ResponseBody
     public ResponseEntity deal(String taskId, @RequestParam Map param) {
         log.debug("动态表单参数：{}", param);
+        param.put("multInstFlag", "1");
         taskService.complete(taskId, param);
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
+    /**
+     * 高亮流程图（活动环节）
+     *
+     * @param processInstanceId
+     * @param response
+     * @throws Exception
+     */
+    @RequestMapping("/diagram/{processInstanceId}")
+    public void readResource(@PathVariable("processInstanceId") String processInstanceId, HttpServletResponse response)
+            throws Exception {
+
+        ProcessInstance processInstance = runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).singleResult();
+        BpmnModel bpmnModel = repositoryService.getBpmnModel(processInstance.getProcessDefinitionId());
+        List<String> activeActivityIds = runtimeService.getActiveActivityIds(processInstanceId);
+
+        InputStream imageStream = processEngineConfiguration.getProcessDiagramGenerator()
+                .generateDiagram(bpmnModel, "png", activeActivityIds, Collections.<String>emptyList(),
+                        processEngineConfiguration.getActivityFontName(), processEngineConfiguration.getLabelFontName(), processEngineConfiguration.getAnnotationFontName(),
+                        processEngineConfiguration.getClassLoader(),
+                        1.0);
+        OutputStream os = null;
+        try {
+            os = response.getOutputStream();
+            IOUtils.copy(imageStream, os);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            IOUtils.closeQuietly(imageStream);
+            IOUtils.closeQuietly(os);
+        }
+    }
+
+    /**
+     * 流程撤销
+     * 流程发起人对整个流程的撤销
+     * 执行此方法后，流程实例的当前任务act_ru_task会被删除，流程历史act_hi_taskinst不会被删除，并且流程历史的状态置为finished完成
+     */
+    @RequestMapping("/delete/{processInstanceId}")
+    @ResponseBody
+    public void delete(@PathVariable("processInstanceId") String processInstanceId) throws Exception {
+        runtimeService.deleteProcessInstance(processInstanceId, "流程撤销");
+    }
+
+    /**
+     * 任务撤销
+     * 环节取回
+     */
+    @RequestMapping("/withdraw/{processInstanceId}")
+    @ResponseBody
+    public void withdraw(@PathVariable("processInstanceId") String processInstanceId) throws Exception {
+        String currentUserId = "wangwu";
+        baseWorkflowService.withdraw(processInstanceId, currentUserId);
+    }
 
 }

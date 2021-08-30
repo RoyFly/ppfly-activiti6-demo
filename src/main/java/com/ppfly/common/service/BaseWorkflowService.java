@@ -19,4 +19,13 @@ public interface BaseWorkflowService {
      * @return
      */
     Page<Task> getTodoPage(Map<String, String> searchParam, int curPage, int pageSize);
+
+    /**
+     * 任务撤销
+     *
+     * @param processInstanceId
+     * @param currentUserId
+     * @throws Exception
+     */
+    void withdraw(String processInstanceId, String currentUserId) throws Exception;
 }

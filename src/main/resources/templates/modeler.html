@@ -264,10 +264,10 @@
 <script type="text/javascript">
     function CloseWindow(action) {
         if (window.CloseOwnerWindow) {
-            alert(1);
+            alert("窗口已关闭");
             return window.CloseOwnerWindow(action);
         } else {
-            alert(2);
+            alert("保存成功!");
             window.close();
         }
     }

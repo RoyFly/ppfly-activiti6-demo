@@ -3,10 +3,17 @@ package com.ppfly.common.service;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.ppfly.common.utils.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.activiti.engine.RuntimeService;
-import org.activiti.engine.TaskService;
+import org.activiti.bpmn.model.BpmnModel;
+import org.activiti.bpmn.model.FlowElement;
+import org.activiti.bpmn.model.FlowNode;
+import org.activiti.bpmn.model.SequenceFlow;
+import org.activiti.engine.*;
+import org.activiti.engine.history.HistoricTaskInstance;
+import org.activiti.engine.runtime.Execution;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.IdentityLink;
 import org.activiti.engine.task.Task;
@@ -16,9 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +39,12 @@ public class BaseWorkflowServiceImpl implements BaseWorkflowService {
 
     @Autowired
     private RuntimeService runtimeService;
+
+    @Autowired
+    private HistoryService historyService;
+
+    @Autowired
+    private RepositoryService repositoryService;
 
     @Override
     public Page<Task> getTodoPage(Map<String, String> searchParam, int curPage, int pageSize) {
@@ -78,6 +89,120 @@ public class BaseWorkflowServiceImpl implements BaseWorkflowService {
         });
         page.setResults(array);
         return page;
+    }
+
+    @Override
+    public void withdraw(String processInstanceId, String currentUserId) throws Exception {
+        // 校验流程是否结束
+        ProcessInstance processInstance = runtimeService.createProcessInstanceQuery()
+                .processInstanceId(processInstanceId).active().singleResult();
+        if (processInstance == null) {
+            throw new ActivitiObjectNotFoundException("流程已结束或已挂起，无法执行撤回操作");
+        }
+
+        HistoricTaskInstance myTask = getMyTask(processInstanceId, currentUserId);
+        if (Objects.isNull(myTask)) {
+            throw new ActivitiException("该任务非当前用户提交，无法撤回");
+        }
+        final String myActivityId = myTask.getTaskDefinitionKey();
+
+        BpmnModel bpmnModel = repositoryService.getBpmnModel(myTask.getProcessDefinitionId());
+        // 获取目标节点定义
+        FlowNode myFlowNode = (FlowNode) bpmnModel.getMainProcess().getFlowElement(myActivityId);
+        // 获取所有下一任务节点的标识ID
+        Map<String, String> taskKeyMap = Maps.newHashMap();
+        // 获取所有下一任务节点对应的FlowElement
+//        List<FlowElement> flowElementList = getOutgoingTask(bpmnModel, myActivityId);
+        List<FlowElement> flowElementList = new ArrayList<>();
+        for (FlowElement flowElement : flowElementList) {
+            String eleId = flowElement.getId();
+            taskKeyMap.put(eleId, eleId);
+        }
+
+        // 获取当前流程待办事项，没有代办事项表明流程结束或已挂起
+        List<Task> alltaskList = taskService.createTaskQuery().processInstanceId(processInstanceId).list();
+        if (alltaskList.size() <= 0) {
+            throw new ActivitiException("流程已结束或已挂起，无法执行撤回操作");
+        }
+
+        // 判断所有下一任务节点中是否有代办任务，没有则表示任务已办理或已撤回，此时无法再执行撤回操作
+        List<Task> nextTaskList = Lists.newArrayList();
+        for (Task task : alltaskList) {
+            if (taskKeyMap.containsKey(task.getTaskDefinitionKey())) {
+                nextTaskList.add(task);
+            }
+        }
+        if (nextTaskList.size() <= 0) {
+            throw new ActivitiException("任务已办理或已撤回，无法执行撤回操作");
+        }
+
+        // 执行撤回操作
+        for (Task task : nextTaskList) {
+            callBackTask(currentUserId, bpmnModel, myFlowNode, task);
+        }
+
+    }
+
+    /**
+     * 获取我要撤回的任务
+     *
+     * @param processInstanceId
+     * @param currentUserId     必须是我处理的任务（暂不考虑我发起的任务）
+     * @return
+     * @see com.ppfly.common.controller.CommonController#delete(java.lang.String) 撤回发起的任务
+     */
+    private HistoricTaskInstance getMyTask(String processInstanceId, String currentUserId) {
+        HistoricTaskInstance myTask = null;
+        List<HistoricTaskInstance> htiList = historyService.createHistoricTaskInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .orderByTaskCreateTime()
+                .desc()
+                .finished()
+                .list();
+
+        for (HistoricTaskInstance historicTaskInstance : htiList) {
+            if (currentUserId.equals(historicTaskInstance.getAssignee())) {
+                myTask = historicTaskInstance;
+                break;
+            }
+        }
+        return myTask;
+    }
+
+    /**
+     * 撤回任务具体实现
+     *
+     * @param currentUserId
+     * @param bpmnModel
+     * @param myFlowNode
+     * @param task
+     */
+    @Deprecated
+    private void callBackTask(String currentUserId, BpmnModel bpmnModel, FlowNode myFlowNode, Task task) {
+        Execution execution = runtimeService.createExecutionQuery()
+                .executionId(task.getExecutionId()).singleResult();
+        String activityId = execution.getActivityId();
+        FlowNode flowNode = (FlowNode) bpmnModel.getMainProcess()
+                .getFlowElement(activityId);
+
+        // 记录原活动方向
+        List<SequenceFlow> oriSequenceFlows = new ArrayList<SequenceFlow>();
+        oriSequenceFlows.addAll(flowNode.getOutgoingFlows());
+        flowNode.getOutgoingFlows().clear();
+        // 建立新方向
+        List<SequenceFlow> newSequenceFlowList = new ArrayList<SequenceFlow>();
+        SequenceFlow newSequenceFlow = new SequenceFlow();
+        newSequenceFlow.setId("sid-" + UUID.randomUUID().toString());
+        newSequenceFlow.setSourceFlowElement(flowNode);
+        newSequenceFlow.setTargetFlowElement(myFlowNode);
+        newSequenceFlowList.add(newSequenceFlow);
+        flowNode.setOutgoingFlows(newSequenceFlowList);
+
+        taskService.addComment(task.getId(), task.getProcessInstanceId(), "主动撤回");
+        taskService.resolveTask(task.getId());
+        taskService.claim(task.getId(), currentUserId);
+        taskService.complete(task.getId());
+        flowNode.setOutgoingFlows(oriSequenceFlows);
     }
 
 }

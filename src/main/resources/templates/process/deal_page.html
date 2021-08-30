@@ -186,8 +186,8 @@
                 </div>
                 <hr/>
                 <form method="post" th:action="@{/common/deal.th}" id="form">
+                    <input type="hidden" th:id="taskId" th:name="taskId" th:value="${taskId}"/>
                     <div th:each="prop:${taskFormList}">
-                        <input type="hidden" th:id="taskId" th:name="taskId" th:value="${taskId}"/>
                         <div class="col-md-1 align-right">[[${prop.name}]]</div>
                         <div class="col-md-7 input-group" th:if="*{prop.type.name=='boolean'}">
                             <div class="radio-inline">

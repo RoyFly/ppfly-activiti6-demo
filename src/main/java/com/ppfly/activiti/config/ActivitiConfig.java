@@ -43,7 +43,11 @@ public class ActivitiConfig implements ProcessEngineConfigurationConfigurer {
 //        activitiEventListenerMap.put(ActivitiEventType.TASK_CREATED.name(), Lists.newArrayList(activitiEventListener));
 //        activitiEventListenerMap.put(ActivitiEventType.TASK_COMPLETED.name(), Lists.newArrayList(activitiEventListener));
         configuration.setTypedEventListeners(activitiEventListenerMap);
-
+        //ID生成器
         configuration.setIdGenerator(idGenerator());
+        //jre fonts - Supported Fonts @see https://docs.oracle.com/javase/8/docs/technotes/guides/intl/font.html
+        configuration.setActivityFontName("宋体");
+        configuration.setLabelFontName("宋体");
+        configuration.setAnnotationFontName("宋体");
     }
 }

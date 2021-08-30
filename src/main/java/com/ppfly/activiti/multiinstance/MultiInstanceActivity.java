@@ -15,20 +15,18 @@ import java.util.List;
 @Transactional
 public interface MultiInstanceActivity extends Serializable {
 
-    String getStrategyName();
-
 
     /**
-     * 设置会签人员
+     * 设置会签环节审核人员
      *
      * @param execution
      * @return Collection
      */
-    List<String> getUserNames(DelegateExecution execution);
+    List<String> resolveUsersForTask(DelegateExecution execution);
 
 
     /**
-     * 完成条件
+     * 每次实例结束时计算的表达式
      *
      * @param execution
      * @return

@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * 执行自由跳转命令
- * 比如：批量关闭超时工单、工单补录
+ * 应用场景：流程取回、批量关闭超时工单、工单补录（简化流程环节走完流程）
  */
 public class SetFLowNodeAndGoCmd implements Command<Void> {
     /**
